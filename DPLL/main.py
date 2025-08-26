@@ -1,72 +1,105 @@
-"""
-Programa Principal - SAT Solver DPLL
-===================================
+'''
+SAT Solver DPLL - main
+======================
 
-INSTRUCCIONES PARA IMPLEMENTAR EL ALGORITMO DPLL:
+Script principal para probar el solver SAT usando DPLL (Davis–Putnam–Logemann–Loveland).
+Aquí se arman ejemplos y se muestra cómo funciona el algoritmo paso a paso
 
-El algoritmo DPLL (Davis–Putnam–Logemann–Loveland) es un método de backtracking
-para resolver el problema SAT que mejora la fuerza bruta mediante:
+DPLL es un algoritmo de backtracking que mejora la fuerza bruta eliminando cláusulas satisfechas y simplificando la fórmula en cada paso
 
-1. ENTRADA DE DATOS:
-   - Fórmula en forma clausal (igual que fuerza bruta)
-   - Asignación vacía al inicio: assignment = {}
-
-2. CASO BASE 1 (ÉXITO):
-   - Si la fórmula está vacía (todas las cláusulas fueron satisfechas)
-   - → devuelve True y la asignación actual
-
-3. CASO BASE 2 (FRACASO):
-   - Si alguna cláusula es vacía (sin literales)
-   - → devuelve False y asignación vacía
-
-4. SELECCIÓN DE LITERAL:
-   - Escoge un literal no asignado (ej: el primero que aparezca)
-   - Esto introduce el carácter no determinista del algoritmo
-
-5. PROPAGACIÓN AL ASIGNAR TRUE:
-   - Crea nueva fórmula eliminando cláusulas que contienen ese literal
-   - Elimina el literal complementario de las demás cláusulas
-   - Añade la asignación (literal=True) a la asignación parcial
-   - Llama recursivamente a DPLL
-   - Si devuelve satisfacible → propaga True
-
-6. PROPAGACIÓN AL ASIGNAR FALSE:
-   - Si la primera llamada falló, repite con el literal complementario
-   - Si devuelve satisfacible → propaga True
-
-7. DEVOLVER INSATISFACIBILIDAD:
-   - Si ninguna de las dos asignaciones funciona
-   - → devuelve False y asignación vacía
-
-PASOS PARA COMPLETAR LA IMPLEMENTACIÓN:
-
-TODO: Implementar las siguientes optimizaciones en dpll_solver.py:
-
-1. PROPAGACIÓN DE LITERALES UNITARIOS:
-   - Detectar cláusulas unitarias (con un solo literal)
-   - Asignar automáticamente el valor que satisface la cláusula
-   - Propagar esta asignación antes del branching
-
-2. ELIMINACIÓN DE LITERALES PUROS:
-   - Detectar literales que aparecen solo en forma positiva o negativa
-   - Asignar el valor que satisface todas sus ocurrencias
-   - Eliminar las cláusulas que los contienen
-
-3. HEURÍSTICAS DE SELECCIÓN:
-   - Implementar heurística VSIDS (Variable State Independent Decaying Sum)
-   - O heurística Jeroslow-Wang para selección de variables
-   - Mejora significativamente el rendimiento
-
-4. APRENDIZAJE DE CLÁUSULAS (CDCL):
-   - Analizar conflictos para generar cláusulas aprendidas
-   - Implementar non-chronological backtracking
-   - Esto convierte DPLL en CDCL (más moderno)
-
-ESTRUCTURA ACTUAL:
-- dpll_solver.py: Implementación básica del algoritmo DPLL
-- main.py: Este archivo con ejemplos y instrucciones
-"""
-
+Cosas clave:
+ - Si la fórmula queda vacía, es SATISFACIBLE
+ - Si hay una cláusula vacía, es INSATISFACIBLE
+ - Se elige el primer literal que se encuentre
+ - Se eliminan cláusulas satisfechas y literales opuestos
+ - Hace backtracking: prueba True, si no va, prueba False
+'''
 from dpll_solver import DPLLSolver
+
+
+def print_formula_readable(formula: list) -> str:
+    #convierte la fórmula a una cadena legible tipo (p ∨ ¬q) ∧ (q ∨ r)
+    clause_strings = []
+    for clause in formula:
+        if len(clause) == 1:
+            clause_strings.append(clause[0])
+        else:
+            clause_strings.append(f"({' ∨ '.join(clause)})")
+    return ' ∧ '.join(clause_strings)
+
+
+def demonstrate_dpll_steps(solver: DPLLSolver, formula: list, example_name: str):
+    #muestra paso a paso cómo trabaja el DPLL con la fórmula dada
+    print(f"\n{example_name}")
+    print("=" * len(example_name))
+    
+    formula_readable = print_formula_readable(formula)
+    print(f"Fórmula: {formula_readable}")
+    print(f"Representación interna: {formula}")
+    
+    #parseo para ver variables encontradas
+    clauses = solver.parse_formula(formula)
+    print(f"Variables encontradas: {sorted(list(solver.variables))}")
+    print(f"Cláusulas como conjuntos: {clauses}")
+    
+    #ejecutar DPLL
+    print("\n--- Ejecutando algoritmo DPLL ---")
+    is_satisfiable, assignment = solver.solve(formula)
+    
+    print(f"Resultado: {'SATISFACIBLE' if is_satisfiable else 'INSATISFACIBLE'}")
+    
+    if is_satisfiable:
+        print(f"Asignación encontrada: {assignment}")
+        print("Verificación:")
+        for var, value in sorted(assignment.items()):
+            print(f"  {var} = {'Verdadero' if value else 'Falso'}")
+    else:
+        print("No existe asignación que satisfaga la fórmula")
+
+
+def main():
+    #pruebas de ej para el SAT Solver DPLL
+    print("SAT Solver - Algoritmo DPLL")
+    print("(Davis–Putnam–Logemann–Loveland)")
+    print("=" * 50)
+    
+    #Ej 1: Satisfacible simple
+    solver1 = DPLLSolver()
+    formula1 = [['p', '¬q'], ['q', 'r']]
+    demonstrate_dpll_steps(solver1, formula1, "Ejemplo 1: (p ∨ ¬q) ∧ (q ∨ r)")
+    
+    #Ej 2: Insatisfacible clásico
+    solver2 = DPLLSolver()
+    formula2 = [['p'], ['¬p']]
+    demonstrate_dpll_steps(solver2, formula2, "Ejemplo 2: p ∧ ¬p (contradicción)")
+    
+    #Ej 3: Más complejo, pero satisfacible
+    solver3 = DPLLSolver()
+    formula3 = [['a', 'b'], ['¬a', 'c'], ['¬b', '¬c']]
+    demonstrate_dpll_steps(solver3, formula3, "Ejemplo 3: (a ∨ b) ∧ (¬a ∨ c) ∧ (¬b ∨ ¬c)")
+    
+    #Ej 4: Fórmula vacía (siempre SAT)
+    solver4 = DPLLSolver()
+    formula4 = []
+    demonstrate_dpll_steps(solver4, formula4, "Ejemplo 4: Fórmula vacía")
+    
+    #Ej 5: Cláusula unitaria
+    solver5 = DPLLSolver()
+    formula5 = [['x'], ['¬x', 'y'], ['¬y', 'z']]
+    demonstrate_dpll_steps(solver5, formula5, "Ejemplo 5: x ∧ (¬x ∨ y) ∧ (¬y ∨ z)")
+    
+    #Ej 6: 3-SAT más complicado
+    solver6 = DPLLSolver()
+    formula6 = [
+        ['a', 'b', 'c'],
+        ['¬a', '¬b', 'c'],
+        ['a', '¬b', '¬c'],
+        ['¬a', 'b', '¬c']
+    ]
+    demonstrate_dpll_steps(solver6, formula6, 
+                          "Ejemplo 6: (a∨b∨c) ∧ (¬a∨¬b∨c) ∧ (a∨¬b∨¬c) ∧ (¬a∨b∨¬c)")
+    
+if __name__ == "__main__":
+    main()
 
 
